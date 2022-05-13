@@ -1,5 +1,6 @@
 const express = require('express');
-const routes = require('./routes');
+const cors = require('cors');
+const postsRoutes = require('./routes/posts.routes');
 require('dotenv').config();
 const mongoose = require('mongoose');
 
@@ -7,7 +8,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
-app.use('/', routes)
+app.use(cors());
+app.use('/posts', postsRoutes)
 
 app.listen(PORT, (error) => {
     if(error) {
