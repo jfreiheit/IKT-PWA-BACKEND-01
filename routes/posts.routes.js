@@ -52,6 +52,7 @@ function getOnePost(id) {
 
                     let base64file = 'data:' + docs[0].contentType + ';base64,' + fileData.join('');
                     let getPost = new Post({
+                        "_id": post._id,
                         "title": post.title,
                         "location": post.location, 
                         "image_id": base64file
@@ -78,7 +79,7 @@ function getAllPosts() {
                 const onePost = await getOnePost(post._id);
                 sendAllPosts.push(onePost);
             }
-            console.log('sendAllPosts', sendAllPosts)
+            // console.log('sendAllPosts', sendAllPosts)
             resolve(sendAllPosts)
         } catch {
                 reject(new Error("Posts do not exist!"));
