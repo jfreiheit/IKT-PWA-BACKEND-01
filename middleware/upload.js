@@ -2,9 +2,13 @@ const multer = require('multer');
 const { GridFsStorage } = require('multer-gridfs-storage');
 require('dotenv').config();
 
+const credentials = process.env.PATH_TO_PEM
 const storage = new GridFsStorage({
     url: process.env.DB_CONNECTION,
-    options: { useNewUrlParser: true, useUnifiedTopology: true },
+    options: { 
+        sslKey: credentials,        // nur falls ein Zertifikat zur Autorisierung
+        sslCert: credentials,       // für MongoDB Atlas verwendet wird
+        dbName: process.env.DATABASE },
     file: (req, file) => {
         const match = ["image/png", "image/jpg", "image/jpeg"];
 
@@ -13,7 +17,7 @@ const storage = new GridFsStorage({
             return `${Date.now()}-jf-${file.originalname}`;
         }
 
-        console.log('store');
+        // console.log('store');
         return {
             bucketName: 'posts',
             filename: `${Date.now()}-jf-${file.originalname}`, 

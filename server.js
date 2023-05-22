@@ -19,7 +19,12 @@ app.listen(PORT, (error) => {
     }
 })
 
-mongoose.connect(process.env.DB_CONNECTION, { useNewUrlParser: true, useUnifiedTopology: true })
+const credentials = process.env.PATH_TO_PEM
+mongoose.connect(process.env.DB_CONNECTION, { 
+    sslKey: credentials,
+    sslCert: credentials,
+    dbName: process.env.DATABASE 
+})
 .then(
     () => console.log('connected to BD')
 ).catch(

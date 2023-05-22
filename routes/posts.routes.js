@@ -5,6 +5,12 @@ const upload = require('../middleware/upload')
 const mongoose = require('mongoose')
 require('dotenv').config()
 
+const credentials = process.env.PATH_TO_PEM
+const connection = mongoose.createConnection(process.env.DB_CONNECTION, { 
+    sslKey: credentials,
+    sslCert: credentials,
+    dbName: "htwinsta" });
+
 /* ----------------- POST ---------------------------- */
 
 // POST one post
@@ -28,41 +34,31 @@ router.post('/', upload.single('file'), async(req, res) => {
 
 /* ----------------- GET ---------------------------- */
 
-const connect = mongoose.createConnection(process.env.DB_CONNECTION, { useNewUrlParser: true, useUnifiedTopology: true });
-const collectionFiles = connect.collection('posts.files');
-const collectionChunks = connect.collection('posts.chunks');
-
 function getOnePost(id) {
     return new Promise( async(resolve, reject) => {
         try {
+            
             const post = await Post.findOne({ _id: id });
             let fileName = post.image_id;
+            const files = connection.collection('posts.files');
+            const chunks = connection.collection('posts.chunks');
 
-            collectionFiles.find({filename: fileName}).toArray( async(err, docs) => {
-
-                // sort({n: 1}) --> die chunks nach Eigenschaft n aufsteigend sortieren
-                collectionChunks.find({files_id : docs[0]._id}).sort({n: 1}).toArray( (err, chunks) => {
-                    
-                    const fileData = [];
-                    for(let chunk of chunks)
-                    {
-                        // console.log('chunk._id', chunk._id)
-                        fileData.push(chunk.data.toString('base64'));
-                    }
-
-                    let base64file = 'data:' + docs[0].contentType + ';base64,' + fileData.join('');
-                    let getPost = new Post({
-                        "_id": post._id,
-                        "title": post.title,
-                        "location": post.location, 
-                        "image_id": base64file
-                    });
-
-                    resolve(getPost)
-                })
-
-            }) // toArray find filename
-
+            const cursorFiles = files.find({filename: fileName});
+            const allFiles = await cursorFiles.toArray();
+            const cursorChunks = chunks.find({files_id : allFiles[0]._id});
+            const sortedChunks = cursorChunks.sort({n: 1});
+            let fileData = [];
+            for await (const chunk of sortedChunks) {
+                fileData.push(chunk.data.toString('base64'));
+            }
+            let base64file = 'data:' + allFiles[0].contentType + ';base64,' + fileData.join('');
+            let getPost = new Post({
+                "title": post.title,
+                "location": post.location, 
+                "image_id": base64file
+            });
+            //console.log('getPost', getPost)
+            resolve(getPost)
         } catch {
             reject(new Error("Post does not exist!"));
         }
@@ -70,21 +66,21 @@ function getOnePost(id) {
 }
 
 function getAllPosts() {
-    return new Promise( async(resolve, reject) => {
-        const sendAllPosts = [];
-        const allPosts = await Post.find();
-        try {
-            for(const post of allPosts) {
-                console.log('post', post)
-                const onePost = await getOnePost(post._id);
-                sendAllPosts.push(onePost);
-            }
-            // console.log('sendAllPosts', sendAllPosts)
-            resolve(sendAllPosts)
-        } catch {
-                reject(new Error("Posts do not exist!"));
-        }
-    });
+	return new Promise( async(resolve, reject) => {
+		const sendAllPosts = [];
+		const allPosts = await Post.find();
+		try {
+			for(const post of allPosts) {
+				// console.log('post', post)
+				const onePost = await getOnePost(post._id);
+				sendAllPosts.push(onePost);
+			}
+			// console.log('sendAllPosts', sendAllPosts)
+			resolve(sendAllPosts)
+		} catch {
+				reject(new Error("Posts do not exist!"));
+    }
+	});
 }
 
 // GET one post via id
